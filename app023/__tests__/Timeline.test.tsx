@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import Timeline from '@/app/components/Timeline';
 import { useBeatStore } from '@/store/useBeatStore';
@@ -79,6 +79,49 @@ describe('Timeline', () => {
       expect(rafSpy).toHaveBeenCalled();
     });
     rafSpy.mockRestore();
+  });
+
+  it('keeps the recording playhead moving and only scrolls when it nears the viewport edge', () => {
+    const baseRecording = createEmptyRecording();
+    useBeatStore.setState((state) => ({
+      ...state,
+      recording: {
+        ...baseRecording,
+        duration: 12,
+      },
+      isRecording: true,
+      playhead: 1,
+    }));
+
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callback(0 as unknown as DOMHighResTimeStamp);
+      return 1;
+    });
+    const cafSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {});
+
+    render(<Timeline />);
+    const container = screen.getByRole('table');
+    Object.defineProperty(container, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(container, 'scrollWidth', { value: 3200, configurable: true });
+
+    act(() => {
+      useBeatStore.setState((state) => ({
+        ...state,
+        playhead: 2,
+      }));
+    });
+    expect(container.scrollLeft).toBe(0);
+
+    act(() => {
+      useBeatStore.setState((state) => ({
+        ...state,
+        playhead: 8,
+      }));
+    });
+    expect(container.scrollLeft).toBeCloseTo(600);
+
+    rafSpy.mockRestore();
+    cafSpy.mockRestore();
   });
 
   it('allows adjusting zoom to change lane width', () => {

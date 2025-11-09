@@ -91,18 +91,33 @@ const TimelineComponent = () => {
     const trackOffset = trackArea.offsetLeft;
     const absolutePosition = trackOffset + playheadPixels;
     const maxScroll = Math.max(container.scrollWidth - container.clientWidth, 0);
-    const focusRatio = isRecording ? 0.35 : 0.5;
+    const clampScroll = (value: number) => clamp(value, 0, maxScroll);
 
     const rafId = requestAnimationFrame(() => {
       playheadEl.style.left = `${absolutePosition}px`;
-      if (maxScroll > 0) {
-        const target = clamp(
-          absolutePosition - container.clientWidth * focusRatio,
-          0,
-          maxScroll
-        );
-        container.scrollLeft = target;
+      if (maxScroll <= 0) {
+        return;
       }
+
+      if (isRecording) {
+        const viewport = container.clientWidth;
+        if (viewport <= 0) {
+          return;
+        }
+        const marginBase = Math.max(viewport * 0.15, 80);
+        const margin = Math.min(marginBase, Math.max(viewport / 2, 0));
+        const visibleStart = container.scrollLeft;
+        const visibleEnd = visibleStart + viewport;
+        if (absolutePosition < visibleStart + margin) {
+          container.scrollLeft = clampScroll(absolutePosition - margin);
+        } else if (absolutePosition > visibleEnd - margin) {
+          container.scrollLeft = clampScroll(absolutePosition - viewport + margin);
+        }
+        return;
+      }
+
+      const focusRatio = 0.5;
+      container.scrollLeft = clampScroll(absolutePosition - container.clientWidth * focusRatio);
     });
     return () => cancelAnimationFrame(rafId);
   }, [playheadPixels, timelineWidth, isRecording]);
