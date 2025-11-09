@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
 import { VibeKanbanCompanion } from "./vibe-kanban-web-companion";
 
 const geistSans = Geist({
@@ -29,7 +30,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <VibeKanbanCompanion />
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
