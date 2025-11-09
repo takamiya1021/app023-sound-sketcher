@@ -17,7 +17,7 @@ const SOUND_LABELS: Record<SoundType, string> = {
 };
 
 const MIN_DURATION = 4;
-const MIN_TIMELINE_WIDTH = 640;
+const MIN_TIMELINE_WIDTH = 1280;
 const PIXELS_PER_SECOND = 160;
 const HIGHLIGHT_WINDOW = 0.12;
 const RECORDING_HEADROOM_SECONDS = 12;
@@ -89,38 +89,17 @@ const TimelineComponent = () => {
     }
 
     const trackOffset = trackArea.offsetLeft;
-    const absolutePosition = trackOffset + playheadPixels;
+
+    // プレイヘッドを画面上のtrackOffset位置に固定、タイムラインをスクロール
     const maxScroll = Math.max(container.scrollWidth - container.clientWidth, 0);
-    const clampScroll = (value: number) => clamp(value, 0, maxScroll);
+    const targetScroll = playheadPixels - trackOffset;
+    const actualScroll = maxScroll > 0 ? clamp(targetScroll, 0, maxScroll) : 0;
 
-    const rafId = requestAnimationFrame(() => {
-      playheadEl.style.left = `${absolutePosition}px`;
-      if (maxScroll <= 0) {
-        return;
-      }
+    container.scrollLeft = actualScroll;
 
-      if (isRecording) {
-        const viewport = container.clientWidth;
-        if (viewport <= 0) {
-          return;
-        }
-        const marginBase = Math.max(viewport * 0.15, 80);
-        const margin = Math.min(marginBase, Math.max(viewport / 2, 0));
-        const visibleStart = container.scrollLeft;
-        const visibleEnd = visibleStart + viewport;
-        if (absolutePosition < visibleStart + margin) {
-          container.scrollLeft = clampScroll(absolutePosition - margin);
-        } else if (absolutePosition > visibleEnd - margin) {
-          container.scrollLeft = clampScroll(absolutePosition - viewport + margin);
-        }
-        return;
-      }
-
-      const focusRatio = 0.5;
-      container.scrollLeft = clampScroll(absolutePosition - container.clientWidth * focusRatio);
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [playheadPixels, timelineWidth, isRecording]);
+    // プレイヘッドの画面上の位置をtrackOffsetで固定（スクロール補正）
+    playheadEl.style.left = `${trackOffset + actualScroll}px`;
+  }, [playheadPixels, timelineWidth]);
 
   return (
     <section
@@ -174,7 +153,7 @@ const TimelineComponent = () => {
             <span
               role="rowheader"
               aria-label={SOUND_LABELS[sound]}
-              className="w-32 shrink-0 text-xs uppercase tracking-widest text-zinc-500"
+              className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500"
             >
               {SOUND_LABELS[sound]}
             </span>
@@ -191,7 +170,7 @@ const TimelineComponent = () => {
             >
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:3rem_100%]" />
               {groupedNotes[sound].map((note) => {
-                const position = clamp((note.time / duration) * 100, 0, 100);
+                const positionPx = clamp((note.time / duration) * timelineWidth, 0, timelineWidth);
                 const isActive = activeNoteIds.has(note.id);
                 return (
                   <span
@@ -202,7 +181,7 @@ const TimelineComponent = () => {
                         ? 'bg-yellow-300 shadow-yellow-400'
                         : 'bg-emerald-400 shadow-emerald-500/40'
                     }`}
-                    style={{ left: `${position}%` }}
+                    style={{ left: `${positionPx}px` }}
                     aria-label={`${SOUND_LABELS[sound]}: ${note.time.toFixed(2)}秒`}
                   />
                 );

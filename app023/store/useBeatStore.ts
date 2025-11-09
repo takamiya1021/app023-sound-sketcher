@@ -29,7 +29,7 @@ export interface BeatStoreState {
 
 export interface BeatStoreActions {
   startRecording: () => void;
-  stopRecording: (duration?: number) => void;
+  stopRecording: (duration?: number) => number;
   addNote: (note: BeatNote) => void;
   updateNote: (
     id: string,
@@ -104,7 +104,7 @@ const createBeatStoreConfig = (
       window.cancelAnimationFrame(playheadTickerId);
     }
     playheadTickerId = null;
-    playheadBaseTimestamp = null;
+    // playheadBaseTimestampはリセットしない（次回のstartPlayheadTickerで再設定される）
   };
 
   const startPlayheadTicker = (
@@ -114,29 +114,46 @@ const createBeatStoreConfig = (
     if (!hasWindow() || typeof window.requestAnimationFrame !== 'function') {
       return;
     }
-    playheadBaseTimestamp = nowSec() - getState().playhead;
+    // playheadBaseTimestampを現在時刻 - 現在のplayheadで初期化
+    // 再生開始時はplayhead=0なので、nowSec()になる
+    const currentPlayhead = getState().playhead;
+    playheadBaseTimestamp = nowSec() - currentPlayhead;
 
     const tick = () => {
-      if (!getState().isRecording) {
-        stopPlayheadTicker();
-        return;
-      }
+      const state = getState();
       const elapsed = Math.max(0, nowSec() - (playheadBaseTimestamp ?? 0));
+
       setState((prev) => {
-        if (!prev.isRecording) {
-          return prev;
+        // 録音中：playheadとdurationを両方更新
+        if (prev.isRecording) {
+          const duration = Math.max(prev.recording.duration, elapsed);
+          return {
+            ...prev,
+            playhead: elapsed,
+            recording: {
+              ...prev.recording,
+              duration,
+            },
+          };
         }
-        const duration = Math.max(prev.recording.duration, elapsed);
-        return {
-          ...prev,
-          playhead: elapsed,
-          recording: {
-            ...prev.recording,
-            duration,
-          },
-        };
+        // 再生中：playheadのみ更新、durationを超えたら停止
+        if (prev.isPlaying) {
+          const maxPlayhead = prev.recording.duration || 0;
+          const clampedPlayhead = Math.min(elapsed, maxPlayhead);
+          return {
+            ...prev,
+            playhead: clampedPlayhead,
+          };
+        }
+        return prev;
       });
-      playheadTickerId = window.requestAnimationFrame(tick);
+
+      const newState = getState();
+      if (newState.isRecording || newState.isPlaying) {
+        playheadTickerId = window.requestAnimationFrame(tick);
+      } else {
+        stopPlayheadTicker();
+      }
     };
 
     stopPlayheadTicker();
@@ -162,6 +179,7 @@ const createBeatStoreConfig = (
       set({
         isRecording: true,
         recording: freshRecording,
+        playhead: 0,
       });
       startPlayheadTicker(set, get);
     },
@@ -187,6 +205,7 @@ const createBeatStoreConfig = (
         };
       });
       stopPlayheadTicker();
+      return elapsed;
     },
     addNote: (note) => {
       const sound = note.sound;
@@ -293,9 +312,11 @@ const createBeatStoreConfig = (
       });
     },
     startPlayback: () => {
-      set({ isPlaying: true });
+      set({ isPlaying: true, playhead: 0 });
+      startPlayheadTicker(set, get);
     },
     stopPlayback: () => {
+      stopPlayheadTicker();
       set({ isPlaying: false, playhead: 0 });
     },
     setPlayhead: (position) => {
