@@ -12,8 +12,8 @@ import {
 } from '@/types';
 import {
   clearPersistedState,
-  loadRecording as loadRecordingFromStorage,
-  loadSettings as loadSettingsFromStorage,
+  loadRecording,
+  loadSettings,
   saveRecording,
   saveSettings,
 } from '@/lib/storage';
@@ -24,6 +24,7 @@ export interface BeatStoreState {
   isPlaying: boolean;
   playhead: number;
   settings: AppSettings;
+  hasHydrated: boolean;
 }
 
 export interface BeatStoreActions {
@@ -47,6 +48,7 @@ export interface BeatStoreActions {
   loadSettings: (settings: AppSettings) => void;
   resetPersistedState: () => void;
   setKeyMapping: (key: string, sound: SoundType) => void;
+  hydrateFromStorage: () => void;
 }
 
 export type BeatStore = BeatStoreState & BeatStoreActions;
@@ -65,10 +67,6 @@ const nowSec = () => (typeof performance !== 'undefined'
 
 const createInitialRecording = (fallback?: Recording): Recording => {
   if (fallback) return fallback;
-  const stored = loadRecordingFromStorage();
-  if (stored) {
-    return stored;
-  }
   return createEmptyRecording();
 };
 
@@ -83,14 +81,9 @@ const createInitialSettings = (fallback?: AppSettings): AppSettings => {
       },
     };
   }
-  const stored = loadSettingsFromStorage();
   return {
     ...DEFAULT_SETTINGS,
-    ...stored,
-    keyMapping: {
-      ...DEFAULT_SETTINGS.keyMapping,
-      ...stored.keyMapping,
-    },
+    keyMapping: { ...DEFAULT_SETTINGS.keyMapping },
   };
 };
 
@@ -156,6 +149,7 @@ const createBeatStoreConfig = (
     isPlaying: initialState?.isPlaying ?? false,
     playhead: initialState?.playhead ?? 0,
     settings: baseSettings,
+    hasHydrated: initialState?.hasHydrated ?? false,
     startRecording: () => {
       recordingStartTimestamp = nowSec();
       const freshRecording: Recording = {
@@ -386,6 +380,24 @@ const createBeatStoreConfig = (
           settings,
         };
       });
+    },
+    hydrateFromStorage: () => {
+      if (!hasWindow()) {
+        return;
+      }
+      const state = get();
+      if (state.hasHydrated) {
+        return;
+      }
+      const storedRecording = loadRecording();
+      const storedSettings = loadSettings();
+      set((prev) => ({
+        ...prev,
+        recording: storedRecording ?? prev.recording,
+        settings: storedSettings ?? prev.settings,
+        playhead: storedRecording?.duration ?? prev.playhead,
+        hasHydrated: true,
+      }));
     },
   });
 };
