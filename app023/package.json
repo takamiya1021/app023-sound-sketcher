@@ -15,9 +15,11 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "tone": "^15.1.22",
+    "vibe-kanban-web-companion": "^0.0.5",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx-source": "^7.27.1",
     "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
