@@ -32,8 +32,8 @@ const ControlPanel = () => {
 
   const handleRecord = async () => {
     if (isRecording) {
-      stopRecording();
-      setPlayhead(recording.duration);
+      const finalDuration = stopRecording();
+      setPlayhead(finalDuration);
       setMessage('録音を停止しました。');
       return;
     }
@@ -52,12 +52,20 @@ const ControlPanel = () => {
     setPlayhead(0);
     startPlayback();
     setMessage('録音したビートを再生中…');
+
+    const playbackDuration = (recording.duration + 0.5) * 1000;
+
     try {
-      await audioEngine.playRecording(recording.notes, recording.bpm, (seconds) => {
-        const clampSeconds = recording.duration
-          ? Math.min(seconds, recording.duration)
-          : seconds;
-        setPlayhead(clampSeconds);
+      // 音声再生を開始（Promiseを待たずに実行）
+      audioEngine.playRecording(recording.notes, recording.bpm).catch((error) => {
+        console.error('Audio playback error:', error);
+      });
+
+      // setTimeout で指定時間後に自動停止
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, playbackDuration);
       });
     } catch (error) {
       setMessage((error as Error).message ?? '再生に失敗しました');

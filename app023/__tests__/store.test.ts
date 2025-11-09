@@ -110,4 +110,40 @@ describe('useBeatStore', () => {
     updateRecordingProgress(0.25);
     expect(store.getState().recording.duration).toBeCloseTo(0.5);
   });
+
+  it('automatically updates playhead when recording starts', () => {
+    let rafCallbacks: Array<() => void> = [];
+    let rafId = 0;
+
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      rafCallbacks.push(callback);
+      return ++rafId;
+    });
+
+    const cafSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {
+      // キャンセル処理は省略（テストには影響しない）
+    });
+
+    const { startRecording } = store.getState();
+
+    // 録音開始前はplayhead = 0
+    expect(store.getState().playhead).toBe(0);
+
+    // 録音開始
+    startRecording();
+
+    // requestAnimationFrameが呼ばれたはず
+    expect(rafSpy).toHaveBeenCalled();
+
+    // 最初のtickを実行
+    rafCallbacks[0]();
+
+    // playheadが0より大きくなっているべき
+    const playhead = store.getState().playhead;
+    expect(playhead).toBeGreaterThan(0);
+    expect(store.getState().isRecording).toBe(true);
+
+    rafSpy.mockRestore();
+    cafSpy.mockRestore();
+  });
 });
