@@ -8,12 +8,14 @@ import ExportDialog from '@/app/components/ExportDialog';
 import ImportDialog from '@/app/components/ImportDialog';
 import AIBeatSuggestion from '@/app/components/AIBeatSuggestion';
 import StoreHydrator from '@/app/components/StoreHydrator';
+import ServiceWorkerRegister from '@/app/components/ServiceWorkerRegister';
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-black to-zinc-900 text-zinc-100">
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-10">
         <StoreHydrator />
+        <ServiceWorkerRegister />
         <Header />
 
         <ControlPanel />

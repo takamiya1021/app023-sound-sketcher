@@ -435,7 +435,7 @@ Playwrightによるユーザーシナリオ全体のテスト。
 ## Phase 12: デプロイ準備・最終調整（予定工数: 3時間）
 
 ### 目的
-静的エクスポート、音源ファイル配置、セキュリティヘッダー・WAF対策、ビルド確認。
+静的エクスポート、音源ファイル配置、PWA対応、ビルド確認。
 
 ### タスク
 
@@ -456,22 +456,23 @@ Playwrightによるユーザーシナリオ全体のテスト。
 - セットアップ手順、使い方記述
 - キーボード操作ガイド追加
 
-#### 【x】12-5. セキュリティヘッダー・WAF対策実装（1時間）
-- **Red**: セキュリティヘッダー確認テスト作成
+#### 【 】12-5. PWA対応実装（1時間）
+- **Red**: PWAインストール確認テスト作成
 - **Green**:
-  - `public/_headers` 作成（Netlify/Cloudflare Pages用）
-  - `vercel.json` 作成（Vercel用）
-  - セキュリティヘッダー設定
-    - X-Frame-Options: DENY（Clickjacking対策）
-    - X-Content-Type-Options: nosniff（MIME sniffing対策）
-    - X-XSS-Protection: 1; mode=block（XSS対策）
-    - Referrer-Policy: strict-origin-when-cross-origin
-    - Permissions-Policy: 適切な機能制限
-  - CSP（Content Security Policy）実装
-    - script-src: 'self' 'unsafe-inline'（Tone.js対応）
-    - style-src: 'self' 'unsafe-inline'（Tailwind CSS対応）
-    - connect-src: Google Gemini API許可
-- **Refactor**: ヘッダー最適化、ポリシー調整
+  - `public/manifest.json` 作成
+    - アプリ名、説明、テーマカラー設定
+    - アイコン指定（192x192, 512x512）
+    - display: standalone設定
+  - `public/sw.js`（Service Worker）作成
+    - 音源ファイルの事前キャッシュ
+    - 静的アセットのキャッシュ戦略
+    - ネットワーク優先、フォールバックでキャッシュ利用
+  - `app/layout.tsx` 更新
+    - manifest.json参照追加
+    - theme-color meta tag追加
+    - Service Worker登録スクリプト追加
+  - アイコン配置（ユーザー提供を待つ）
+- **Refactor**: キャッシュ戦略最適化、オフライン対応改善
 
 ---
 
@@ -542,10 +543,11 @@ Playwrightによるユーザーシナリオ全体のテスト。
 - [ ] タイムライン操作が快適
 - [ ] AI提案が役立つ
 
-### セキュリティ
-- [ ] セキュリティヘッダー実装（X-Frame-Options, X-Content-Type-Options等）
-- [ ] CSP（Content Security Policy）設定
-- [ ] XSS対策実装
-- [ ] Clickjacking対策実装
-- [ ] APIキーが平文表示されない
-- [ ] BPM範囲チェック実装
+### PWA対応
+- [ ] manifest.json実装
+- [ ] Service Worker登録
+- [ ] アイコン配置（192x192, 512x512）
+- [ ] オフライン動作確認
+- [ ] インストールプロンプト表示確認
+- [ ] theme-color設定
+- [ ] standalone表示モード動作確認
