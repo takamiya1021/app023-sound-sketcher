@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 
-import { importCSV, importJSON, importWAVFile } from '@/lib/importUtils';
+import { importCSV, importJSON, importWAVFile, importWAVFromURL } from '@/lib/importUtils';
 import { audioEngine } from '@/lib/audioEngine';
 import { useBeatStore } from '@/store/useBeatStore';
 import { BeatNote, createEmptyRecording, SoundType, SOUND_TYPES } from '@/types';
@@ -12,6 +12,7 @@ const ImportDialog = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSound, setSelectedSound] = useState<SoundType>('kick');
+  const [urlInput, setUrlInput] = useState('');
 
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -124,6 +125,41 @@ const ImportDialog = () => {
     }
   };
 
+  const handleURLImport = async () => {
+    if (!urlInput.trim()) {
+      setError('URLを入力してください');
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    try {
+      const audioBuffer = await importWAVFromURL(urlInput);
+
+      // zustand storeに保存
+      setCustomSound(selectedSound, audioBuffer);
+
+      // audioEngineに反映
+      audioEngine.setCustomSound(selectedSound, audioBuffer);
+
+      setSuccess(`${selectedSound} にカスタム音源を設定しました（Web）`);
+      setTimeout(() => setSuccess(null), 3000);
+
+      // URL入力をクリア
+      setUrlInput('');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Web音源のインポート中にエラーが発生しました');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-6 text-sm text-zinc-100">
       <header>
@@ -210,6 +246,23 @@ const ImportDialog = () => {
               className="rounded-md bg-purple-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black disabled:bg-purple-500/30"
             >
               WAVをアップロード
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://example.com/sound.wav"
+              className="flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs placeholder:text-zinc-600"
+            />
+            <button
+              type="button"
+              onClick={handleURLImport}
+              disabled={isLoading}
+              className="rounded-md bg-emerald-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black disabled:bg-emerald-500/30"
+            >
+              Webから取り込み
             </button>
           </div>
           <p className="text-xs text-zinc-500">

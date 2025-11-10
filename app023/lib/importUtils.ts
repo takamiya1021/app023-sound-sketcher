@@ -213,6 +213,78 @@ export const importWAVFile = async (file: File): Promise<AudioBuffer> => {
 };
 
 /**
+ * WebからURLを指定してWAV音源をインポート
+ * @param url - WAVファイルのURL
+ * @returns AudioBuffer
+ */
+export const importWAVFromURL = async (url: string): Promise<AudioBuffer> => {
+  // URL検証
+  if (!url || typeof url !== 'string') {
+    throw new Error('URLが指定されていません');
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new Error('URLの形式が不正です');
+  }
+
+  // HTTPSまたはHTTPのみ許可
+  if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+    throw new Error('HTTP/HTTPSのURLのみ対応しています');
+  }
+
+  try {
+    // fetchでダウンロード
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`ファイルの取得に失敗しました: ${response.status} ${response.statusText}`);
+    }
+
+    // Content-Typeチェック（厳密ではない）
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && !contentType.includes('audio')) {
+      console.warn(`警告: Content-Typeが音声ファイルではありません (${contentType})`);
+    }
+
+    // ArrayBufferとして取得
+    const arrayBuffer = await response.arrayBuffer();
+
+    // ファイルサイズチェック（5MB = 5 * 1024 * 1024）
+    const maxSize = 5 * 1024 * 1024;
+    if (arrayBuffer.byteLength > maxSize) {
+      throw new Error('ファイルサイズは5MB以下である必要があります');
+    }
+
+    // AudioContextでデコード
+    const audioContext = new AudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+    return audioBuffer;
+  } catch (error) {
+    if (error instanceof Error) {
+      // 既知のエラーはそのまま再スロー
+      if (error.message.includes('ファイルの取得') ||
+          error.message.includes('ファイルサイズ') ||
+          error.message.includes('URLの形式') ||
+          error.message.includes('URLが指定') ||
+          error.message.includes('HTTP/HTTPS')) {
+        throw error;
+      }
+      // ネットワークエラー
+      if (error.name === 'TypeError') {
+        throw new Error('ネットワークエラー: URLにアクセスできません');
+      }
+      // デコードエラー
+      throw new Error('WAVファイルのデコードに失敗しました');
+    }
+    throw new Error('Web音源インポート中に不明なエラーが発生しました');
+  }
+};
+
+/**
  * CSVファイルからBeatNote配列をインポート
  * @param file - インポートするCSVファイル
  * @returns BeatNote配列
