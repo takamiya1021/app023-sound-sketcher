@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { importCSV, importJSON, importWAVFile, importWAVAndAnalyze } from '@/lib/importUtils';
+import type { SoundDebugSummary } from '@/lib/audioAnalyzer';
 import { audioEngine } from '@/lib/audioEngine';
 import { useBeatStore } from '@/store/useBeatStore';
 import { BeatNote, createEmptyRecording, SoundType, SOUND_TYPES } from '@/types';
@@ -20,16 +21,7 @@ type SoundSummary = {
 
 declare global {
   interface Window {
-    __soundSummary?: {
-      totalBeats: number;
-      classificationCounts: Record<string, number>;
-      processing?: {
-        energyAvg: number;
-        classifyAvg: number;
-        energyTotal: number;
-        classifyTotal: number;
-      };
-    };
+    __soundSummary?: SoundDebugSummary;
   }
 }
 
