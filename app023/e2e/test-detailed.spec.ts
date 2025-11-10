@@ -124,14 +124,60 @@ test('超詳細な動作確認', async ({ page }) => {
   });
   await page.screenshot({ path: 'e2e/screenshots/detail-3-after-snare.png' });
 
-  console.log('\n=== 判定 ===');
+  // 録音停止→再生で位置合わせを検証
+  await page.click('button[aria-label="Record"]');
+  await page.waitForTimeout(200);
+  await page.click('button[aria-label="Play"]');
+  console.log('\n=== 判定（再生時の整合性）===');
 
-  // プレイヘッドの画面上の位置が固定か（これが重要）
-  const playheadScreenFixed = Math.abs(rec1.playheadRect.left - rec2.playheadRect.left) < 1 &&
-                               Math.abs(rec2.playheadRect.left - rec3.playheadScreenLeft) < 1 &&
-                               Math.abs(rec3.playheadScreenLeft - rec4.playheadScreenLeft) < 1;
-  console.log('✅ プレイヘッド 画面位置 固定:', playheadScreenFixed ? '✅' : '❌');
-  console.log(`   値: ${rec1.playheadRect.left} → ${rec2.playheadRect.left} → ${rec3.playheadScreenLeft} → ${rec4.playheadScreenLeft}`);
+  const measureAlignments = async (keywords: string[]) => {
+    const start = Date.now();
+    const minima = new Map<string, number>(keywords.map((key) => [key, Number.POSITIVE_INFINITY]));
+
+    while (Date.now() - start < 4000) {
+      const diffs = await page.evaluate((targetKeywords) => {
+        const container = document.querySelector('[role="table"]');
+        const playhead = container?.querySelector('[data-testid="timeline-playhead"]') as HTMLElement | null;
+        const notes = container?.querySelectorAll('[data-testid^="timeline-note-"]') ?? [];
+        if (!playhead) {
+          return targetKeywords.map(() => null);
+        }
+
+        return targetKeywords.map((keyword) => {
+          const targetNote = Array.from(notes).find((note) =>
+            note.getAttribute('aria-label')?.includes(keyword)
+          ) as HTMLElement | undefined;
+          if (!targetNote) {
+            return null;
+          }
+          const playheadX = playhead.getBoundingClientRect().left;
+          const noteX = targetNote.getBoundingClientRect().left;
+          return Math.abs(noteX - playheadX);
+        });
+      }, keywords);
+
+      diffs.forEach((diff, index) => {
+        if (typeof diff === 'number') {
+          const key = keywords[index];
+          minima.set(key, Math.min(minima.get(key) ?? Number.POSITIVE_INFINITY, diff));
+        }
+      });
+
+      await page.waitForTimeout(16);
+    }
+
+    return minima;
+  };
+
+  const minima = await measureAlignments(['キック', 'スネア']);
+  const kickAlignmentDiff = minima.get('キック') ?? Number.POSITIVE_INFINITY;
+  const snareAlignmentDiff = minima.get('スネア') ?? Number.POSITIVE_INFINITY;
+
+  const kickAligned = Number.isFinite(kickAlignmentDiff) && kickAlignmentDiff < 8;
+  const snareAligned = Number.isFinite(snareAlignmentDiff) && snareAlignmentDiff < 8;
+
+  console.log('✅ キックとプレイヘッドの最小差 < 8px:', kickAligned ? '✅' : '❌', '差:', kickAlignmentDiff);
+  console.log('✅ スネアとプレイヘッドの最小差 < 8px:', snareAligned ? '✅' : '❌', '差:', snareAlignmentDiff);
 
   // スクロールが増加しているか（タイムラインが流れている）
   const scrollIncreasing = rec4.scrollLeft > rec1.scrollLeft;
@@ -145,7 +191,8 @@ test('超詳細な動作確認', async ({ page }) => {
   console.log('\n参考: プレイヘッド left プロパティ（スクロールに応じて変化するのが正常）');
   console.log(`   値: ${rec1.playheadLeft} → ${rec2.playheadLeft} → ${rec3.playheadLeft} → ${rec4.playheadLeft}`);
 
-  expect(playheadScreenFixed).toBe(true);
+  expect(kickAligned).toBe(true);
+  expect(snareAligned).toBe(true);
   expect(scrollIncreasing).toBe(true);
   expect(allNotesVisible).toBe(true);
 });

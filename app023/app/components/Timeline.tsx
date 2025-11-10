@@ -21,6 +21,8 @@ const MIN_TIMELINE_WIDTH = 1280;
 const PIXELS_PER_SECOND = 160;
 const HIGHLIGHT_WINDOW = 0.12;
 const RECORDING_HEADROOM_SECONDS = 12;
+const PLAYHEAD_VIEWPORT_FRACTION = 0.2;
+const PLAYHEAD_MIN_OFFSET = 24;
 
 const formatTimeAxisTicks = (duration: number, divisions = 4) => {
   const increment = duration / divisions;
@@ -65,16 +67,18 @@ const TimelineComponent = () => {
     let nearestSound: SoundType | null = null;
     let minDelta = Number.POSITIVE_INFINITY;
     const active = new Set<string>();
+
     recording.notes.forEach((note) => {
       const delta = Math.abs(note.time - playhead);
+      if (delta < minDelta) {
+        minDelta = delta;
+        nearestSound = note.sound;
+      }
       if (delta <= threshold) {
         active.add(note.id);
-        if (delta < minDelta) {
-          minDelta = delta;
-          nearestSound = note.sound;
-        }
       }
     });
+
     return { highlightedSound: nearestSound, activeNoteIds: active };
   }, [playhead, recording.notes, duration]);
 
@@ -89,16 +93,21 @@ const TimelineComponent = () => {
     }
 
     const trackOffset = trackArea.offsetLeft;
+    const viewportWidth = container.clientWidth;
+    const availableTrackWidth = Math.max(viewportWidth - trackOffset, 0);
+    const desiredInset = availableTrackWidth * PLAYHEAD_VIEWPORT_FRACTION;
+    const minInset = availableTrackWidth > 0 ? Math.min(PLAYHEAD_MIN_OFFSET, availableTrackWidth) : 0;
+    const insetWithinTrack = availableTrackWidth > 0 ? clamp(desiredInset, minInset, availableTrackWidth) : 0;
 
-    // プレイヘッドを画面上のtrackOffset位置に固定、タイムラインをスクロール
+    // プレイヘッドを視認しやすい位置に保つためタイムラインをスクロール
     const maxScroll = Math.max(container.scrollWidth - container.clientWidth, 0);
-    const targetScroll = playheadPixels - trackOffset;
+    const targetScroll = playheadPixels - insetWithinTrack;
     const actualScroll = maxScroll > 0 ? clamp(targetScroll, 0, maxScroll) : 0;
 
     container.scrollLeft = actualScroll;
 
-    // プレイヘッドの画面上の位置をtrackOffsetで固定（スクロール補正）
-    playheadEl.style.left = `${trackOffset + actualScroll}px`;
+    // プレイヘッドはタイムライン座標そのものに従って移動させる
+    playheadEl.style.left = `${trackOffset + playheadPixels}px`;
   }, [playheadPixels, timelineWidth]);
 
   return (
@@ -139,56 +148,60 @@ const TimelineComponent = () => {
         ref={containerRef}
         className="relative flex flex-col gap-2 overflow-x-auto pb-1"
       >
-        {SOUND_TYPES.map((sound) => (
-          <div
-            role="row"
-            key={sound}
-            data-testid={`timeline-lane-${sound}`}
-            className={`flex items-center gap-4 rounded-lg border px-4 py-3 transition-colors ${
-              highlightedSound === sound
-                ? 'border-emerald-400 bg-emerald-500/10 shadow-inner shadow-emerald-500/20'
-                : 'border-zinc-800/60 bg-zinc-900/60'
-            }`}
-          >
-            <span
-              role="rowheader"
-              aria-label={SOUND_LABELS[sound]}
-              className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500"
-            >
-              {SOUND_LABELS[sound]}
-            </span>
+        {SOUND_TYPES.map((sound) => {
+          const isLaneHighlighted = highlightedSound === sound;
+          return (
             <div
-              role="gridcell"
-              className="relative h-8 flex-1 overflow-hidden rounded-md bg-zinc-900"
-              data-sound={sound}
-              ref={sound === SOUND_TYPES[0] ? trackAreaRef : undefined}
-              style={{
-                minWidth: `${timelineWidth}px`,
-                width: `${timelineWidth}px`,
-                flexShrink: 0,
-              }}
+              role="row"
+              key={sound}
+              data-testid={`timeline-lane-${sound}`}
+              className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-3"
             >
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:3rem_100%]" />
-              {groupedNotes[sound].map((note) => {
-                const positionPx = clamp((note.time / duration) * timelineWidth, 0, timelineWidth);
-                const isActive = activeNoteIds.has(note.id);
-                return (
-                  <span
-                    key={note.id}
-                    data-testid={`timeline-note-${note.id}`}
-                    className={`absolute top-1/2 h-4 w-2 -translate-y-1/2 rounded-sm shadow transition-colors ${
-                      isActive
-                        ? 'bg-yellow-300 shadow-yellow-400'
-                        : 'bg-emerald-400 shadow-emerald-500/40'
-                    }`}
-                    style={{ left: `${positionPx}px` }}
-                    aria-label={`${SOUND_LABELS[sound]}: ${note.time.toFixed(2)}秒`}
-                  />
-                );
-              })}
+              <span
+                role="rowheader"
+                aria-label={SOUND_LABELS[sound]}
+                className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500"
+              >
+                {SOUND_LABELS[sound]}
+              </span>
+              <div
+                role="gridcell"
+                className={`relative h-8 flex-1 overflow-hidden rounded-md bg-zinc-900 transition-all ${
+                  isLaneHighlighted
+                    ? 'ring-2 ring-emerald-400/70 shadow-[0_0_18px_rgba(16,185,129,0.45)]'
+                    : 'ring-1 ring-zinc-800/70'
+                }`}
+                data-sound={sound}
+                data-highlighted={isLaneHighlighted ? 'true' : 'false'}
+                ref={sound === SOUND_TYPES[0] ? trackAreaRef : undefined}
+                style={{
+                  minWidth: `${timelineWidth}px`,
+                  width: `${timelineWidth}px`,
+                  flexShrink: 0,
+                }}
+              >
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:3rem_100%]" />
+                {groupedNotes[sound].map((note) => {
+                  const positionPx = clamp((note.time / duration) * timelineWidth, 0, timelineWidth);
+                  const isActive = activeNoteIds.has(note.id);
+                  return (
+                    <span
+                      key={note.id}
+                      data-testid={`timeline-note-${note.id}`}
+                      className={`absolute top-1/2 h-4 w-2 -translate-y-1/2 rounded-sm shadow transition-colors ${
+                        isActive
+                          ? 'bg-yellow-300 shadow-yellow-400'
+                          : 'bg-emerald-400 shadow-emerald-500/40'
+                      }`}
+                      style={{ left: `${positionPx}px` }}
+                      aria-label={`${SOUND_LABELS[sound]}: ${note.time.toFixed(2)}秒`}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div
           aria-hidden
