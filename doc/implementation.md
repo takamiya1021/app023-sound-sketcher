@@ -304,14 +304,15 @@ JSON/CSVエクスポート・インポート、WAVファイルインポート、
     - AudioBufferデコード確認
 - **Refactor**: エラー処理強化
 
-#### 【x】7-6. ImportDialogコンポーネント（2時間）
+#### 【一部完了】7-6. ImportDialogコンポーネント（2時間）
 - **Red**: インポートダイアログテスト
 - **Green**: ImportDialog UI実装
-  - ファイル選択（input type="file"）
-  - JSON/CSV/WAVファイル対応
-  - ドラッグ&ドロップ対応
-  - プログレス表示
-  - エラーメッセージ表示
+  - ✅ ファイル選択（input type="file"）
+  - ✅ JSON/CSVファイル対応
+  - ⏳ WAVファイル対応（未実装）
+  - ⏳ カスタム音源管理（未実装）
+  - ✅ プログレス表示
+  - ✅ エラーメッセージ表示
 - **Refactor**: UX改善
 
 #### 【x】7-7. インポート機能テスト（2時間）

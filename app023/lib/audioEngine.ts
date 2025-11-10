@@ -18,6 +18,7 @@ export interface AudioEngine {
   playRecording: (notes: BeatNote[], bpm: number, onProgress?: (seconds: number) => void) => Promise<void>;
   stopPlayback: () => void;
   setVolume: (volume: number) => void;
+  setCustomSound: (sound: SoundType, buffer: AudioBuffer | null) => void;
 }
 
 type ToneModule = typeof Tone;
@@ -135,6 +136,16 @@ export const createAudioEngine = (tone: ToneModule = Tone): AudioEngine => {
   let metronomeEventId: TransportEventId | null = null;
   let playbackCompletion: (() => void) | null = null;
   let progressEventId: TransportEventId | null = null;
+  const customPlayers: Record<SoundType, InstanceType<typeof Tone.Player> | null> = {
+    kick: null,
+    snare: null,
+    'hihat-closed': null,
+    'hihat-open': null,
+    clap: null,
+    tom: null,
+    cymbal: null,
+    rim: null,
+  };
 
   const ensureSampler = async () => {
     if (sampler && samplerReady) {
@@ -220,6 +231,16 @@ export const createAudioEngine = (tone: ToneModule = Tone): AudioEngine => {
     init,
     isReady: () => initialized,
     playSound: (sound: SoundType, time?: number) => {
+      const when = typeof time === 'number' ? time : tone.now();
+
+      // カスタム音源があれば優先して使用
+      const customPlayer = customPlayers[sound];
+      if (customPlayer) {
+        customPlayer.start(when);
+        return;
+      }
+
+      // デフォルト音源を使用
       if (!sampler || !samplerReady) {
         return;
       }
@@ -227,7 +248,6 @@ export const createAudioEngine = (tone: ToneModule = Tone): AudioEngine => {
       if (!note) {
         return;
       }
-      const when = typeof time === 'number' ? time : tone.now();
       sampler.triggerAttackRelease(note, '16n', when, DEFAULT_VELOCITY);
     },
     setBpm: (bpm: number) => {
@@ -328,6 +348,24 @@ export const createAudioEngine = (tone: ToneModule = Tone): AudioEngine => {
       }
     },
     setVolume: noop,
+    setCustomSound: (sound: SoundType, buffer: AudioBuffer | null) => {
+      // 既存のPlayerを破棄
+      if (customPlayers[sound]) {
+        customPlayers[sound]?.dispose();
+        customPlayers[sound] = null;
+      }
+
+      // 新しいPlayerを作成
+      if (buffer) {
+        const player = new tone.Player({
+          url: buffer,
+          onload: () => {
+            player.toDestination();
+          },
+        });
+        customPlayers[sound] = player;
+      }
+    },
   };
 };
 

@@ -2,19 +2,23 @@
 
 import { useRef, useState } from 'react';
 
-import { importCSV, importJSON } from '@/lib/importUtils';
+import { importCSV, importJSON, importWAVFile } from '@/lib/importUtils';
+import { audioEngine } from '@/lib/audioEngine';
 import { useBeatStore } from '@/store/useBeatStore';
-import { BeatNote, createEmptyRecording } from '@/types';
+import { BeatNote, createEmptyRecording, SoundType, SOUND_TYPES } from '@/types';
 
 const ImportDialog = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedSound, setSelectedSound] = useState<SoundType>('kick');
 
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const wavInputRef = useRef<HTMLInputElement>(null);
 
   const loadRecording = useBeatStore((state) => state.loadRecording);
+  const setCustomSound = useBeatStore((state) => state.setCustomSound);
 
   const handleImportNotes = async (notes: BeatNote[]) => {
     if (!notes.length) {
@@ -74,14 +78,49 @@ const ImportDialog = () => {
     }
   };
 
-  const handleButtonClick = (type: 'json' | 'csv') => {
+  const handleWAVFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setSuccess(null);
+    setIsLoading(true);
+
+    try {
+      const audioBuffer = await importWAVFile(file);
+
+      // zustand storeに保存
+      setCustomSound(selectedSound, audioBuffer);
+
+      // audioEngineに反映
+      audioEngine.setCustomSound(selectedSound, audioBuffer);
+
+      setSuccess(`${selectedSound} にカスタム音源を設定しました`);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('WAVファイルのインポート中にエラーが発生しました');
+      }
+    } finally {
+      setIsLoading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleButtonClick = (type: 'json' | 'csv' | 'wav') => {
     setError(null);
     setSuccess(null);
 
     if (type === 'json') {
       jsonInputRef.current?.click();
-    } else {
+    } else if (type === 'csv') {
       csvInputRef.current?.click();
+    } else {
+      wavInputRef.current?.click();
     }
   };
 
@@ -89,9 +128,9 @@ const ImportDialog = () => {
     <section className="flex flex-col gap-4 rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-6 text-sm text-zinc-100">
       <header>
         <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">インポート</p>
-        <p className="text-lg font-semibold">録音データを読み込めます。</p>
+        <p className="text-lg font-semibold">録音データ・音源を読み込めます。</p>
         <p className="text-xs text-zinc-400">
-          JSON/CSV形式のファイルから録音データを復元できます。
+          JSON/CSVファイルから録音データを復元、WAVファイルでカスタム音源を追加できます。
         </p>
       </header>
 
@@ -112,25 +151,71 @@ const ImportDialog = () => {
         data-testid="csv-file-input"
         className="hidden"
       />
+      <input
+        ref={wavInputRef}
+        type="file"
+        accept=".wav,audio/wav,audio/x-wav"
+        onChange={handleWAVFileChange}
+        data-testid="wav-file-input"
+        className="hidden"
+      />
 
-      {/* ボタン */}
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => handleButtonClick('json')}
-          disabled={isLoading}
-          className="rounded-md bg-blue-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black disabled:bg-blue-500/30"
-        >
-          JSONから読み込み
-        </button>
-        <button
-          type="button"
-          onClick={() => handleButtonClick('csv')}
-          disabled={isLoading}
-          className="rounded-md border border-zinc-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] disabled:opacity-50"
-        >
-          CSVから読み込み
-        </button>
+      {/* 録音データインポート */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          録音データ
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => handleButtonClick('json')}
+            disabled={isLoading}
+            className="rounded-md bg-blue-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black disabled:bg-blue-500/30"
+          >
+            JSONから読み込み
+          </button>
+          <button
+            type="button"
+            onClick={() => handleButtonClick('csv')}
+            disabled={isLoading}
+            className="rounded-md border border-zinc-700 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] disabled:opacity-50"
+          >
+            CSVから読み込み
+          </button>
+        </div>
+      </div>
+
+      {/* カスタム音源インポート */}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          カスタム音源
+        </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedSound}
+              onChange={(e) => setSelectedSound(e.target.value as SoundType)}
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs uppercase tracking-wider"
+            >
+              {SOUND_TYPES.map((sound) => (
+                <option key={sound} value={sound}>
+                  {sound}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => handleButtonClick('wav')}
+              disabled={isLoading}
+              className="rounded-md bg-purple-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-black disabled:bg-purple-500/30"
+            >
+              WAVをアップロード
+            </button>
+          </div>
+          <p className="text-xs text-zinc-500">
+            選択した音色をWAVファイルで上書きできます（5MB以下）
+          </p>
+        </div>
       </div>
 
       {/* ローディング表示 */}

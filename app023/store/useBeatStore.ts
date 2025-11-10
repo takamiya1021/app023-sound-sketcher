@@ -25,6 +25,7 @@ export interface BeatStoreState {
   playhead: number;
   settings: AppSettings;
   hasHydrated: boolean;
+  customSounds: Record<SoundType, AudioBuffer | null>;
 }
 
 export interface BeatStoreActions {
@@ -49,6 +50,8 @@ export interface BeatStoreActions {
   resetPersistedState: () => void;
   setKeyMapping: (key: string, sound: SoundType) => void;
   hydrateFromStorage: () => void;
+  setCustomSound: (sound: SoundType, buffer: AudioBuffer | null) => void;
+  clearCustomSounds: () => void;
 }
 
 export type BeatStore = BeatStoreState & BeatStoreActions;
@@ -167,6 +170,16 @@ const createBeatStoreConfig = (
     playhead: initialState?.playhead ?? 0,
     settings: baseSettings,
     hasHydrated: initialState?.hasHydrated ?? false,
+    customSounds: initialState?.customSounds ?? {
+      kick: null,
+      snare: null,
+      'hihat-closed': null,
+      'hihat-open': null,
+      clap: null,
+      tom: null,
+      cymbal: null,
+      rim: null,
+    },
     startRecording: () => {
       recordingStartTimestamp = nowSec();
       const freshRecording: Recording = {
@@ -418,6 +431,30 @@ const createBeatStoreConfig = (
         settings: storedSettings ?? prev.settings,
         playhead: storedRecording?.duration ?? prev.playhead,
         hasHydrated: true,
+      }));
+    },
+    setCustomSound: (sound, buffer) => {
+      set((state) => ({
+        ...state,
+        customSounds: {
+          ...state.customSounds,
+          [sound]: buffer,
+        },
+      }));
+    },
+    clearCustomSounds: () => {
+      set((state) => ({
+        ...state,
+        customSounds: {
+          kick: null,
+          snare: null,
+          'hihat-closed': null,
+          'hihat-open': null,
+          clap: null,
+          tom: null,
+          cymbal: null,
+          rim: null,
+        },
       }));
     },
   });
