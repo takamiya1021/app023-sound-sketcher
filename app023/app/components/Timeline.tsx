@@ -83,6 +83,31 @@ const TimelineComponent = () => {
   }, [playhead, recording.notes, duration]);
 
   const ticks = useMemo(() => formatTimeAxisTicks(duration), [duration]);
+  const tickEntries = useMemo(() => {
+    if (duration === 0) {
+      return ticks.map((tick, index) => ({
+        value: tick,
+        left: 0,
+        alignment: index === ticks.length - 1 ? 'right' : 'left',
+      }));
+    }
+    return ticks.map((tick, index) => {
+      const ratio = clamp(tick / duration, 0, 1);
+      const position = ratio * timelineWidth;
+      let alignment: 'left' | 'center' | 'right' = 'center';
+      if (index === 0) {
+        alignment = 'left';
+      } else if (index === ticks.length - 1) {
+        alignment = 'right';
+      }
+      return {
+        value: tick,
+        left: position,
+        alignment,
+      };
+    });
+  }, [ticks, duration, timelineWidth]);
+  const formattedPlayhead = playhead.toFixed(2);
 
   useEffect(() => {
     const playheadEl = playheadRef.current;
@@ -119,7 +144,7 @@ const TimelineComponent = () => {
         <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-zinc-400">
           タイムライン
         </h2>
-        <div className="flex items-center gap-4 text-xs text-zinc-500">
+        <div className="flex items-center gap-6 text-xs text-zinc-500">
           <label className="flex items-center gap-2" htmlFor="timeline-zoom">
             <span className="uppercase tracking-widest text-[0.65rem] text-zinc-500">
               ズーム
@@ -136,11 +161,10 @@ const TimelineComponent = () => {
               className="accent-emerald-400"
             />
           </label>
-          {ticks.map((tick) => (
-            <span key={tick} data-testid={`time-tick-${tick}`} className="tabular-nums">
-              {tick.toFixed(2)}秒
-            </span>
-          ))}
+          <span className="flex items-center gap-1 text-emerald-400" data-testid="playhead-time-indicator">
+            <span className="text-[0.65rem] uppercase tracking-widest text-zinc-500">現在</span>
+            <span className="tabular-nums text-sm">{formattedPlayhead}秒</span>
+          </span>
         </div>
       </header>
       <div
@@ -148,6 +172,41 @@ const TimelineComponent = () => {
         ref={containerRef}
         className="relative flex flex-col gap-2 overflow-x-auto pb-1"
       >
+        <div
+          data-testid="timeline-ruler-row"
+          className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-3"
+        >
+          <span className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500">目盛り</span>
+          <div
+            className="relative h-10 flex-1 overflow-hidden rounded-md bg-zinc-900"
+            style={{
+              minWidth: `${timelineWidth}px`,
+              width: `${timelineWidth}px`,
+              flexShrink: 0,
+            }}
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:3rem_100%]" />
+            {tickEntries.map((tick) => {
+              const transform =
+                tick.alignment === 'center'
+                  ? 'translateX(-50%)'
+                  : tick.alignment === 'right'
+                    ? 'translateX(-100%)'
+                    : 'translateX(0)';
+              return (
+                <div
+                  key={`ruler-${tick.value}`}
+                  data-testid={`timeline-ruler-tick-${tick.value}`}
+                  className="absolute top-1 flex flex-col items-center gap-1 text-[0.6rem] text-zinc-400"
+                  style={{ left: `${tick.left}px`, transform }}
+                >
+                  <span className="h-4 w-px bg-emerald-500/60" />
+                  <span className="tabular-nums">{tick.value.toFixed(2)}秒</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         {SOUND_TYPES.map((sound) => {
           const isLaneHighlighted = highlightedSound === sound;
           return (

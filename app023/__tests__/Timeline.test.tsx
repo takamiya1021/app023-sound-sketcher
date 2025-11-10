@@ -52,6 +52,15 @@ describe('Timeline', () => {
     expect(secondNote).toBeInTheDocument();
   });
 
+  it('renders a ruler row with tick marks and playhead indicator', () => {
+    render(<Timeline />);
+
+    expect(screen.getByTestId('timeline-ruler-row')).toBeInTheDocument();
+    expect(screen.getByTestId('playhead-time-indicator')).toHaveTextContent('現在');
+    const tickElements = screen.getAllByTestId(/timeline-ruler-tick-/i);
+    expect(tickElements.length).toBeGreaterThan(0);
+  });
+
   it('positions the playhead at fixed position', async () => {
     const baseRecording = createEmptyRecording();
     useBeatStore.setState((state) => ({
