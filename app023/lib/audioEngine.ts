@@ -357,12 +357,7 @@ export const createAudioEngine = (tone: ToneModule = Tone): AudioEngine => {
 
       // 新しいPlayerを作成
       if (buffer) {
-        const player = new tone.Player({
-          url: buffer,
-          onload: () => {
-            player.toDestination();
-          },
-        });
+        const player = new tone.Player(buffer).toDestination();
         customPlayers[sound] = player;
       }
     },
