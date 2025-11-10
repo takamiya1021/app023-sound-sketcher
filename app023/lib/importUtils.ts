@@ -1,9 +1,11 @@
 /**
  * インポートユーティリティ
  * JSON/CSVファイルからBeatNote配列をインポート
+ * WAVファイルから自動ビート検出
  */
 
 import { BeatNote, isSoundType, DEFAULT_VELOCITY } from '@/types';
+import { analyzeAudioBuffer } from './audioAnalyzer';
 
 /**
  * ファイルをテキストとして読み込む
@@ -345,5 +347,49 @@ export const importCSV = async (file: File): Promise<BeatNote[]> => {
       throw error;
     }
     throw new Error('CSVインポート中に不明なエラーが発生しました');
+  }
+};
+
+/**
+ * WAVファイルを解析してBeatNote配列を自動生成
+ * @param file - インポートするWAVファイル
+ * @returns BeatNote配列
+ */
+export const importWAVAndAnalyze = async (file: File): Promise<BeatNote[]> => {
+  try {
+    // WAVファイルをAudioBufferとして読み込み
+    const audioBuffer = await importWAVFile(file);
+
+    // オーディオ解析してビートを検出
+    const notes = await analyzeAudioBuffer(audioBuffer);
+
+    return notes;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('WAVファイル解析中に不明なエラーが発生しました');
+  }
+};
+
+/**
+ * WebからURLを指定してWAV音源を解析してBeatNote配列を自動生成
+ * @param url - WAVファイルのURL
+ * @returns BeatNote配列
+ */
+export const importWAVFromURLAndAnalyze = async (url: string): Promise<BeatNote[]> => {
+  try {
+    // Web URLからWAVファイルをAudioBufferとして読み込み
+    const audioBuffer = await importWAVFromURL(url);
+
+    // オーディオ解析してビートを検出
+    const notes = await analyzeAudioBuffer(audioBuffer);
+
+    return notes;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Web WAVファイル解析中に不明なエラーが発生しました');
   }
 };
