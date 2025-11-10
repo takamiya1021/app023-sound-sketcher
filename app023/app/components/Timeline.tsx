@@ -24,9 +24,110 @@ const RECORDING_HEADROOM_SECONDS = 12;
 const PLAYHEAD_VIEWPORT_FRACTION = 0.2;
 const PLAYHEAD_MIN_OFFSET = 24;
 
-const formatTimeAxisTicks = (duration: number, divisions = 4) => {
-  const increment = duration / divisions;
-  return Array.from({ length: divisions + 1 }, (_, index) => Number((increment * index).toFixed(2)));
+const formatSecondsLabel = (value: number, step: number) => {
+  if (step >= 1) {
+    return value.toFixed(0);
+  }
+  if (step >= 0.1) {
+    return value.toFixed(1);
+  }
+  return value.toFixed(2);
+};
+
+const computeNiceInterval = (range: number, maxTicks = 6) => {
+  if (!Number.isFinite(range) || range <= 0) {
+    return 1;
+  }
+  const roughStep = range / maxTicks;
+  const exponent = Math.floor(Math.log10(roughStep));
+  const power = 10 ** exponent;
+  const fraction = roughStep / power;
+  let niceFraction: number;
+  if (fraction <= 1) {
+    niceFraction = 1;
+  } else if (fraction <= 2) {
+    niceFraction = 2;
+  } else if (fraction <= 5) {
+    niceFraction = 5;
+  } else {
+    niceFraction = 10;
+  }
+  return niceFraction * power;
+};
+
+const buildRulerTicks = (duration: number, timelineWidth: number) => {
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return [
+      {
+        value: 0,
+        left: 0,
+        alignment: 'left' as const,
+        label: '0',
+        isMajor: true,
+      },
+    ];
+  }
+
+  const range = Math.max(duration, 0.1);
+  const majorStep = computeNiceInterval(range);
+  const maxValue = Math.max(duration, majorStep);
+  const ticks: Array<{
+    value: number;
+    left: number;
+    alignment: 'left' | 'center' | 'right';
+    label?: string;
+    isMajor: boolean;
+  }> = [];
+
+  for (let major = 0; major <= maxValue + 1e-6; major += majorStep) {
+    const ratio = clamp(major / duration, 0, 1);
+    const left = ratio * timelineWidth;
+    const alignment: 'left' | 'center' | 'right' = major === 0 ? 'left' : major >= duration - 1e-6 ? 'right' : 'center';
+    ticks.push({
+      value: Number(major.toFixed(4)),
+      left,
+      alignment,
+      isMajor: true,
+      label: formatSecondsLabel(major, majorStep),
+    });
+
+    const minorStep = majorStep / 4;
+    if (minorStep >= 0.1) {
+      for (let i = 1; i < 4; i += 1) {
+        const minorValue = major + i * minorStep;
+        if (minorValue >= duration - 1e-6) {
+          break;
+        }
+        const minorRatio = clamp(minorValue / duration, 0, 1);
+        ticks.push({
+          value: Number(minorValue.toFixed(4)),
+          left: minorRatio * timelineWidth,
+          alignment: 'center',
+          isMajor: false,
+        });
+      }
+    }
+  }
+
+  const lastMajor = (() => {
+    for (let i = ticks.length - 1; i >= 0; i -= 1) {
+      if (ticks[i]?.isMajor) {
+        return ticks[i];
+      }
+    }
+    return undefined;
+  })();
+  if (lastMajor && duration - lastMajor.value > 1e-6) {
+    ticks.push({
+      value: duration,
+      left: timelineWidth,
+      alignment: 'right',
+      isMajor: true,
+      label: formatSecondsLabel(duration, majorStep),
+    });
+  }
+
+  return ticks;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -82,31 +183,7 @@ const TimelineComponent = () => {
     return { highlightedSound: nearestSound, activeNoteIds: active };
   }, [playhead, recording.notes, duration]);
 
-  const ticks = useMemo(() => formatTimeAxisTicks(duration), [duration]);
-  const tickEntries = useMemo(() => {
-    if (duration === 0) {
-      return ticks.map((tick, index) => ({
-        value: tick,
-        left: 0,
-        alignment: index === ticks.length - 1 ? 'right' : 'left',
-      }));
-    }
-    return ticks.map((tick, index) => {
-      const ratio = clamp(tick / duration, 0, 1);
-      const position = ratio * timelineWidth;
-      let alignment: 'left' | 'center' | 'right' = 'center';
-      if (index === 0) {
-        alignment = 'left';
-      } else if (index === ticks.length - 1) {
-        alignment = 'right';
-      }
-      return {
-        value: tick,
-        left: position,
-        alignment,
-      };
-    });
-  }, [ticks, duration, timelineWidth]);
+  const tickEntries = useMemo(() => buildRulerTicks(duration, timelineWidth), [duration, timelineWidth]);
   const formattedPlayhead = playhead.toFixed(2);
 
   useEffect(() => {
@@ -176,9 +253,9 @@ const TimelineComponent = () => {
           data-testid="timeline-ruler-row"
           className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-3"
         >
-          <span className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500">目盛り</span>
+          <span className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500">目盛（秒）</span>
           <div
-            className="relative h-10 flex-1 overflow-hidden rounded-md bg-zinc-900"
+            className="relative h-14 flex-1 overflow-hidden rounded-md bg-zinc-900"
             style={{
               minWidth: `${timelineWidth}px`,
               width: `${timelineWidth}px`,
@@ -197,11 +274,16 @@ const TimelineComponent = () => {
                 <div
                   key={`ruler-${tick.value}`}
                   data-testid={`timeline-ruler-tick-${tick.value}`}
-                  className="absolute top-1 flex flex-col items-center gap-1 text-[0.6rem] text-zinc-400"
+                  data-major={tick.isMajor ? 'true' : 'false'}
+                  className="absolute top-2 flex flex-col items-center gap-1 text-[0.65rem] uppercase tracking-wide text-zinc-400"
                   style={{ left: `${tick.left}px`, transform }}
                 >
-                  <span className="h-4 w-px bg-emerald-500/60" />
-                  <span className="tabular-nums">{tick.value.toFixed(2)}秒</span>
+                  <span
+                    className={`block w-px ${tick.isMajor ? 'h-5 bg-emerald-400' : 'h-3 bg-emerald-500/40'}`}
+                  />
+                  {tick.isMajor && (
+                    <span className="tabular-nums text-base text-zinc-50">{tick.label}</span>
+                  )}
                 </div>
               );
             })}

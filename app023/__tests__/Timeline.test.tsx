@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import Timeline from '@/app/components/Timeline';
 import { useBeatStore } from '@/store/useBeatStore';
@@ -57,8 +57,11 @@ describe('Timeline', () => {
 
     expect(screen.getByTestId('timeline-ruler-row')).toBeInTheDocument();
     expect(screen.getByTestId('playhead-time-indicator')).toHaveTextContent('現在');
+    expect(screen.getByText('目盛（秒）')).toBeInTheDocument();
     const tickElements = screen.getAllByTestId(/timeline-ruler-tick-/i);
-    expect(tickElements.length).toBeGreaterThan(0);
+    expect(tickElements.length).toBeGreaterThan(3);
+    const majorLabels = within(screen.getByTestId('timeline-ruler-row')).getAllByText(/\d+(\.\d+)?$/);
+    expect(majorLabels.length).toBeGreaterThan(0);
   });
 
   it('positions the playhead at fixed position', async () => {
