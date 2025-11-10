@@ -95,14 +95,38 @@ const ControlPanel = () => {
 
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-zinc-800/60 bg-zinc-950/60 p-6 text-sm text-zinc-100">
-      <header className="flex flex-col gap-1">
-        <span className="text-xs uppercase tracking-[0.3em] text-zinc-500">セッション</span>
-        <p className="text-lg font-semibold">
-          {isRecording ? '録音中' : isPlaying ? '再生中' : '待機中'}
-        </p>
-        <p className="text-xs text-zinc-400" data-testid="control-message">
-          {message}
-        </p>
+      <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-[0.3em] text-zinc-500">セッション</span>
+          <p className="text-lg font-semibold">
+            {isRecording ? '録音中' : isPlaying ? '再生中' : '待機中'}
+          </p>
+          <p className="text-xs text-zinc-400" data-testid="control-message">
+            {message}
+          </p>
+        </div>
+        <dl className="flex gap-4 text-xs text-zinc-400">
+          <div>
+            <dt className="uppercase tracking-[0.2em]">テンポ</dt>
+            <dd className="text-base text-zinc-100">{recording.bpm}</dd>
+          </div>
+          <div>
+            <dt className="uppercase tracking-[0.2em]">ノート数</dt>
+            <dd className="text-base text-zinc-100">{recording.notes.length}</dd>
+          </div>
+          <div>
+            <dt className="uppercase tracking-[0.2em]">長さ</dt>
+            <dd className="text-base text-zinc-100">
+              {recording.duration ? `${formatDuration(recording.duration)}s` : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="uppercase tracking-[0.2em]">状態</dt>
+            <dd className="text-base text-zinc-100">
+              {isRecording ? 'REC' : isPlaying ? 'PLAY' : 'IDLE'}
+            </dd>
+          </div>
+        </dl>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -144,29 +168,6 @@ const ControlPanel = () => {
           録音データ削除
         </button>
       </div>
-
-      <dl className="grid grid-cols-2 gap-4 text-xs text-zinc-400 sm:grid-cols-4">
-        <div>
-          <dt className="uppercase tracking-[0.2em]">テンポ</dt>
-          <dd className="text-base text-zinc-100">{recording.bpm}</dd>
-        </div>
-        <div>
-          <dt className="uppercase tracking-[0.2em]">ノート数</dt>
-          <dd className="text-base text-zinc-100">{recording.notes.length}</dd>
-        </div>
-        <div>
-          <dt className="uppercase tracking-[0.2em]">長さ</dt>
-          <dd className="text-base text-zinc-100">
-            {recording.duration ? `${formatDuration(recording.duration)}s` : '—'}
-          </dd>
-        </div>
-        <div>
-          <dt className="uppercase tracking-[0.2em]">状態</dt>
-          <dd className="text-base text-zinc-100">
-            {isRecording ? 'REC' : isPlaying ? 'PLAY' : 'IDLE'}
-          </dd>
-        </div>
-      </dl>
     </section>
   );
 };

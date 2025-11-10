@@ -129,6 +129,7 @@ app023/
 │       ├── BPMSettings.tsx
 │       ├── SoundSelector.tsx
 │       ├── ExportDialog.tsx
+│       ├── ImportDialog.tsx       # インポートダイアログ（録音データ・音源ファイル）
 │       ├── AIBeatSuggestion.tsx
 │       ├── ApiKeySettings.tsx
 │       └── Header.tsx
@@ -137,6 +138,7 @@ app023/
 │   ├── keyboardHandler.ts       # キーボードイベント処理
 │   ├── geminiService.ts         # Gemini API呼び出し
 │   ├── exportUtils.ts           # JSON/CSVエクスポート
+│   ├── importUtils.ts           # JSON/CSVインポート・WAVファイルインポート
 │   └── storage.ts               # LocalStorage管理
 ├── store/
 │   └── useBeatStore.ts          # Zustand Store
@@ -280,7 +282,69 @@ time,sound,velocity
 1.0,hihat-closed,0.6
 ```
 
-### 6.5 AI機能（Gemini API）
+### 6.5 JSON/CSVインポート（録音データの復元）
+
+**機能概要**:
+- エクスポートしたJSON/CSVファイルを読み込み
+- BeatNote配列に変換してタイムラインに復元
+- 既存の録音データに追加または置き換え
+
+**処理フロー**:
+1. ファイル選択（input type="file"）
+2. FileReader APIでファイル読み込み
+3. JSON/CSVパース＆バリデーション
+4. BeatNote配列に変換
+5. Zustand Storeに格納
+6. タイムラインに反映
+
+**バリデーション**:
+- 必須フィールド: time, sound
+- time: 0以上の数値
+- sound: SoundType列挙値に含まれる
+- velocity: 0.0-1.0の範囲（省略時0.8）
+
+**エラーハンドリング**:
+- ファイル形式エラー（JSON/CSVパース失敗）
+- データ形式エラー（必須フィールド欠損）
+- 値範囲エラー（time/velocity範囲外）
+- ユーザーに分かりやすいエラーメッセージ表示
+
+### 6.6 外部音源ファイルのインポート（WAVファイル）
+
+**機能概要**:
+- ユーザーが用意したWAVファイルをアップロード
+- Tone.js Samplerに動的に追加
+- キーマッピングに追加してリアルタイム演奏
+
+**処理フロー**:
+1. ファイル選択（input type="file" accept=".wav"）
+2. FileReader APIでArrayBufferとして読み込み
+3. AudioContext.decodeAudioData()でデコード
+4. Tone.js Samplerに追加（動的音源登録）
+5. 新しいSoundType作成（例: "custom-1"）
+6. キーマッピングに追加（未使用キーに自動割り当て）
+7. KeyboardGuideに表示
+
+**制約事項**:
+- 対応形式: WAV（PCM）のみ
+- サンプルレート: 44100Hz推奨
+- チャンネル: Mono/Stereo両対応
+- ファイルサイズ: 5MB以下（ブラウザメモリ制約）
+- セッション内のみ有効（ページリロードで消失）
+
+**バリデーション**:
+- MIMEタイプチェック（audio/wav, audio/x-wav）
+- ファイルサイズチェック（5MB以下）
+- AudioBufferデコード成功確認
+- 重複音源名チェック
+
+**エラーハンドリング**:
+- 非対応ファイル形式
+- ファイルサイズ超過
+- デコード失敗（破損ファイル等）
+- キーマッピング上限到達（8音源まで）
+
+### 6.7 AI機能（Gemini API）
 1. 録音データを JSON 化して Gemini に送信
 2. ビートパターンを分析
 3. ジャンル判定・展開提案を取得

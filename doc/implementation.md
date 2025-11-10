@@ -11,7 +11,7 @@
 - ✅ 要件定義書の全機能が実装済み
 
 ## 工数見積もり合計
-**約55時間**（TDD対応分を含む）
+**約65時間**（TDD対応分を含む）
 
 ---
 
@@ -241,10 +241,10 @@ Canvas/SVGによるタイムライン描画、再生位置カーソル実装。
 
 ---
 
-## Phase 7: エクスポート機能実装（予定工数: 4時間）
+## Phase 7: エクスポート・インポート機能実装（予定工数: 13時間）
 
 ### 目的
-JSON/CSVエクスポート、ダウンロード機能を実装。
+JSON/CSVエクスポート・インポート、WAVファイルインポート、ダウンロード・アップロード機能を実装。
 
 ### タスク
 
@@ -266,6 +266,60 @@ JSON/CSVエクスポート、ダウンロード機能を実装。
 - **Red**: ダウンロードテスト
 - **Green**: FileSaver.js統合
 - **Refactor**: ファイル名生成
+
+#### 【x】7-4. JSON/CSVインポートロジック（2時間）
+- **Red**: インポートテスト作成
+  ```typescript
+  test('should import valid JSON', async () => {
+    const json = '[{"time": 0.0, "sound": "kick", "velocity": 0.8}]';
+    const notes = await importJSON(json);
+    expect(notes).toHaveLength(1);
+  });
+  ```
+- **Green**: `lib/importUtils.ts` 実装
+  ```typescript
+  function importJSON(file: File): Promise<BeatNote[]>
+  function importCSV(file: File): Promise<BeatNote[]>
+  ```
+  - FileReader API使用
+  - JSON/CSVパース
+  - バリデーション（time: 0以上, sound: SoundType, velocity: 0.0-1.0）
+  - エラーハンドリング（形式エラー、データエラー、範囲エラー）
+- **Refactor**: パース処理最適化
+
+#### 【x】7-5. WAVファイルインポート（3時間）
+- **Red**: WAVインポートテスト作成
+- **Green**: WAVファイル処理実装
+  ```typescript
+  function importWAVFile(file: File): Promise<AudioBuffer>
+  ```
+  - FileReader API（ArrayBuffer読み込み）
+  - AudioContext.decodeAudioData()
+  - Tone.js Samplerに動的追加
+  - 新しいSoundType作成
+  - キーマッピング自動割り当て
+  - バリデーション
+    - MIMEタイプチェック（audio/wav, audio/x-wav）
+    - ファイルサイズチェック（5MB以下）
+    - AudioBufferデコード確認
+- **Refactor**: エラー処理強化
+
+#### 【x】7-6. ImportDialogコンポーネント（2時間）
+- **Red**: インポートダイアログテスト
+- **Green**: ImportDialog UI実装
+  - ファイル選択（input type="file"）
+  - JSON/CSV/WAVファイル対応
+  - ドラッグ&ドロップ対応
+  - プログレス表示
+  - エラーメッセージ表示
+- **Refactor**: UX改善
+
+#### 【x】7-7. インポート機能テスト（2時間）
+- **Red**: 統合テスト作成
+  - 正常系テスト（JSON/CSV/WAV）
+  - 異常系テスト（不正ファイル、破損データ）
+- **Green**: テストパス確認
+- **Refactor**: テストカバレッジ向上
 
 ---
 
@@ -378,27 +432,46 @@ Playwrightによるユーザーシナリオ全体のテスト。
 
 ---
 
-## Phase 12: デプロイ準備・最終調整（予定工数: 2時間）
+## Phase 12: デプロイ準備・最終調整（予定工数: 3時間）
 
 ### 目的
-静的エクスポート、音源ファイル配置、ビルド確認。
+静的エクスポート、音源ファイル配置、セキュリティヘッダー・WAF対策、ビルド確認。
 
 ### タスク
 
-#### 【 】12-1. 音源ファイル配置（30分）
+#### 【x】12-1. 音源ファイル配置（30分）
 - public/sounds/ に全音源配置
 - 著作権フリー確認
+- public/sounds/README.md 作成
 
-#### 【 】12-2. 静的エクスポート設定（30分）
+#### 【x】12-2. 静的エクスポート設定（30分）
 - next.config.js 設定
 - ビルドエラー修正
 
-#### 【 】12-3. ビルド・動作確認（30分）
+#### 【x】12-3. ビルド・動作確認（30分）
 - `npm run build` 実行
-- 音声再生確認
+- 音声再生確認（E2Eテスト 9/11パス）
 
-#### 【 】12-4. README作成（30分）
+#### 【x】12-4. README作成（30分）
 - セットアップ手順、使い方記述
+- キーボード操作ガイド追加
+
+#### 【x】12-5. セキュリティヘッダー・WAF対策実装（1時間）
+- **Red**: セキュリティヘッダー確認テスト作成
+- **Green**:
+  - `public/_headers` 作成（Netlify/Cloudflare Pages用）
+  - `vercel.json` 作成（Vercel用）
+  - セキュリティヘッダー設定
+    - X-Frame-Options: DENY（Clickjacking対策）
+    - X-Content-Type-Options: nosniff（MIME sniffing対策）
+    - X-XSS-Protection: 1; mode=block（XSS対策）
+    - Referrer-Policy: strict-origin-when-cross-origin
+    - Permissions-Policy: 適切な機能制限
+  - CSP（Content Security Policy）実装
+    - script-src: 'self' 'unsafe-inline'（Tone.js対応）
+    - style-src: 'self' 'unsafe-inline'（Tailwind CSS対応）
+    - connect-src: Google Gemini API許可
+- **Refactor**: ヘッダー最適化、ポリシー調整
 
 ---
 
@@ -470,6 +543,9 @@ Playwrightによるユーザーシナリオ全体のテスト。
 - [ ] AI提案が役立つ
 
 ### セキュリティ
+- [ ] セキュリティヘッダー実装（X-Frame-Options, X-Content-Type-Options等）
+- [ ] CSP（Content Security Policy）設定
 - [ ] XSS対策実装
+- [ ] Clickjacking対策実装
 - [ ] APIキーが平文表示されない
 - [ ] BPM範囲チェック実装

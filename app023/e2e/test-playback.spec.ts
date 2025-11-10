@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 
 test('再生機能の動作確認', async ({ page }) => {
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await page.waitForTimeout(1000);
 
   console.log('=== 録音開始 ===');

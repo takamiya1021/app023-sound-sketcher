@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('レーンハイライトの継続確認', async ({ page }) => {
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await page.waitForLoadState('networkidle');
 
   // 録音開始

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('超詳細な動作確認', async ({ page }) => {
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await page.waitForTimeout(1000);
 
   console.log('=== 初期状態 ===');

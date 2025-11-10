@@ -9,7 +9,7 @@ test('録音時のプレイヘッド動作確認', async ({ page }) => {
     consoleLogs.push(text);
   });
 
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await page.waitForTimeout(1000);
 
   // 初期状態のプレイヘッド位置

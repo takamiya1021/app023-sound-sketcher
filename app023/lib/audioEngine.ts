@@ -15,7 +15,7 @@ export interface AudioEngine {
   setBpm: (bpm: number) => void;
   startMetronome: () => void;
   stopMetronome: () => void;
-  playRecording: (notes: BeatNote[], bpm: number, onProgress?: (seconds: number) => void) => Promise<void> | void;
+  playRecording: (notes: BeatNote[], bpm: number, onProgress?: (seconds: number) => void) => Promise<void>;
   stopPlayback: () => void;
   setVolume: (volume: number) => void;
 }

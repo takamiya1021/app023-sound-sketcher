@@ -8,7 +8,7 @@ test('録音と再生の完全な動作確認', async ({ page }) => {
     }
   });
 
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await page.waitForTimeout(1000);
 
   console.log('=== 録音開始 ===');

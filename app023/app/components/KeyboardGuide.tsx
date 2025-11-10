@@ -17,7 +17,7 @@ const SOUND_LABELS: Record<SoundType, string> = {
 };
 
 const baseKeyClass =
-  'flex flex-col items-center justify-center rounded-md border border-zinc-700 px-4 py-3 transition-colors duration-150';
+  'flex w-full flex-col items-center justify-center rounded-md border border-zinc-700 px-4 py-3 transition-colors duration-150';
 const inactiveClass =
   'bg-zinc-900 text-zinc-200 shadow-inner shadow-black/40';
 const activeClass = 'bg-emerald-500 text-white shadow-lg shadow-emerald-400/40';
@@ -27,7 +27,7 @@ const KeyboardGuideComponent = () => {
 
   return (
     <div
-      className="flex w-full flex-wrap justify-center gap-3 rounded-xl bg-zinc-950/60 p-6 text-sm text-zinc-100 shadow-inner shadow-black/40"
+      className="grid w-full grid-cols-4 gap-3 rounded-xl bg-zinc-950/60 p-6 text-sm text-zinc-100 shadow-inner shadow-black/40 lg:grid-cols-8"
       role="list"
     >
       {mapping.map(([key, sound]) => {

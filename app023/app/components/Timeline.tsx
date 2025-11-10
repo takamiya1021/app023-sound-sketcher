@@ -247,15 +247,15 @@ const TimelineComponent = () => {
       <div
         role="table"
         ref={containerRef}
-        className="relative flex flex-col gap-2 overflow-x-auto pb-1"
+        className="relative flex flex-col gap-1.5 overflow-x-auto pb-1"
       >
         <div
           data-testid="timeline-ruler-row"
-          className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-3"
+          className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-2"
         >
           <span className="w-16 shrink-0 text-xs uppercase tracking-widest text-zinc-500">目盛（秒）</span>
           <div
-            className="relative h-14 flex-1 overflow-hidden rounded-md bg-zinc-900"
+            className="relative h-12 flex-1 overflow-hidden rounded-md bg-zinc-900"
             style={{
               minWidth: `${timelineWidth}px`,
               width: `${timelineWidth}px`,
@@ -275,14 +275,14 @@ const TimelineComponent = () => {
                   key={`ruler-${tick.value}`}
                   data-testid={`timeline-ruler-tick-${tick.value}`}
                   data-major={tick.isMajor ? 'true' : 'false'}
-                  className="absolute top-2 flex flex-col items-center gap-1 text-[0.65rem] uppercase tracking-wide text-zinc-400"
+                  className="absolute top-1 flex flex-col items-center gap-0.5 text-[0.65rem] uppercase tracking-wide text-zinc-400"
                   style={{ left: `${tick.left}px`, transform }}
                 >
                   <span
-                    className={`block w-px ${tick.isMajor ? 'h-5 bg-emerald-400' : 'h-3 bg-emerald-500/40'}`}
+                    className={`block w-px ${tick.isMajor ? 'h-3 bg-emerald-400' : 'h-1.5 bg-emerald-500/40'}`}
                   />
                   {tick.isMajor && (
-                    <span className="tabular-nums text-base text-zinc-50">{tick.label}</span>
+                    <span className="tabular-nums text-sm text-zinc-50">{tick.label}</span>
                   )}
                 </div>
               );
@@ -296,7 +296,7 @@ const TimelineComponent = () => {
               role="row"
               key={sound}
               data-testid={`timeline-lane-${sound}`}
-              className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-3"
+              className="flex items-center gap-4 rounded-lg border border-zinc-800/60 bg-zinc-900/60 px-4 py-2"
             >
               <span
                 role="rowheader"
@@ -307,7 +307,7 @@ const TimelineComponent = () => {
               </span>
               <div
                 role="gridcell"
-                className={`relative h-8 flex-1 overflow-hidden rounded-md bg-zinc-900 transition-all ${
+                className={`relative h-6 flex-1 overflow-hidden rounded-md bg-zinc-900 transition-all ${
                   isLaneHighlighted
                     ? 'ring-2 ring-emerald-400/70 shadow-[0_0_18px_rgba(16,185,129,0.45)]'
                     : 'ring-1 ring-zinc-800/70'
@@ -329,7 +329,7 @@ const TimelineComponent = () => {
                     <span
                       key={note.id}
                       data-testid={`timeline-note-${note.id}`}
-                      className={`absolute top-1/2 h-4 w-2 -translate-y-1/2 rounded-sm shadow transition-colors ${
+                      className={`absolute top-1/2 h-3 w-2 -translate-y-1/2 rounded-sm shadow transition-colors ${
                         isActive
                           ? 'bg-yellow-300 shadow-yellow-400'
                           : 'bg-emerald-400 shadow-emerald-500/40'

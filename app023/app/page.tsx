@@ -5,6 +5,7 @@ import ControlPanel from '@/app/components/ControlPanel';
 import BpmControl from '@/app/components/BpmControl';
 import SoundSelector from '@/app/components/SoundSelector';
 import ExportDialog from '@/app/components/ExportDialog';
+import ImportDialog from '@/app/components/ImportDialog';
 import AIBeatSuggestion from '@/app/components/AIBeatSuggestion';
 import StoreHydrator from '@/app/components/StoreHydrator';
 
@@ -17,17 +18,18 @@ export default function Home() {
 
         <ControlPanel />
 
-        <section className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-          <KeyboardGuide />
-          <Timeline />
-        </section>
+        <Timeline />
+        <KeyboardGuide />
 
         <section className="grid gap-6 md:grid-cols-2">
           <BpmControl />
           <SoundSelector />
         </section>
 
-        <ExportDialog />
+        <section className="grid gap-6 md:grid-cols-2">
+          <ExportDialog />
+          <ImportDialog />
+        </section>
         <AIBeatSuggestion />
       </main>
     </div>
