@@ -121,12 +121,16 @@ interface FrequencyEnergy {
 
 /**
  * デフォルトのオンセット検出パラメータ
+ * 解析精度2倍向上版：
+ * - hopSize を 512 → 256 に変更（時間分解能2倍）
+ * - threshold を 0.3 → 0.25 に変更（より敏感に検出）
+ * - minPeakDistance を 50ms → 30ms に変更（より近接したビートも検出）
  */
 const DEFAULT_ONSET_PARAMS: OnsetDetectionParams = {
   frameSize: 2048,
-  hopSize: 512,
-  threshold: 0.3,
-  minPeakDistance: 0.05, // 50ms
+  hopSize: 256,
+  threshold: 0.25,
+  minPeakDistance: 0.03, // 30ms
 };
 
 /**

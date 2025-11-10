@@ -132,6 +132,49 @@ const buildRulerTicks = (duration: number, timelineWidth: number) => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+/**
+ * BPMに基づいた拍グリッドを生成
+ * @param bpm - テンポ（BPM）
+ * @param duration - 録音の長さ（秒）
+ * @param timelineWidth - タイムラインの幅（ピクセル）
+ * @returns 拍グリッドの配列
+ */
+const buildBeatGrid = (bpm: number, duration: number, timelineWidth: number) => {
+  if (!Number.isFinite(bpm) || bpm <= 0 || !Number.isFinite(duration) || duration <= 0) {
+    return [];
+  }
+
+  // 1拍の長さ（秒）= 60秒 / BPM
+  const beatDuration = 60 / bpm;
+
+  const grid: Array<{
+    beatNumber: number;
+    time: number;
+    left: number;
+    isMeasure: boolean; // 小節の開始位置かどうか（4拍ごと）
+  }> = [];
+
+  let beatNumber = 0;
+  for (let time = 0; time <= duration; time += beatDuration) {
+    const ratio = time / duration;
+    const left = ratio * timelineWidth;
+
+    // 小節は4拍ごと（4/4拍子を想定）
+    const isMeasure = beatNumber % 4 === 0;
+
+    grid.push({
+      beatNumber,
+      time,
+      left,
+      isMeasure,
+    });
+
+    beatNumber++;
+  }
+
+  return grid;
+};
+
 const TimelineComponent = () => {
   const recording = useBeatStore((state) => state.recording);
   const playhead = useBeatStore((state) => state.playhead);
@@ -184,6 +227,7 @@ const TimelineComponent = () => {
   }, [playhead, recording.notes, duration]);
 
   const tickEntries = useMemo(() => buildRulerTicks(duration, timelineWidth), [duration, timelineWidth]);
+  const beatGrid = useMemo(() => buildBeatGrid(recording.bpm, duration, timelineWidth), [recording.bpm, duration, timelineWidth]);
   const formattedPlayhead = playhead.toFixed(2);
 
   useEffect(() => {
@@ -222,6 +266,10 @@ const TimelineComponent = () => {
           タイムライン
         </h2>
         <div className="flex items-center gap-6 text-xs text-zinc-500">
+          <span className="flex items-center gap-1 text-purple-400" data-testid="bpm-indicator">
+            <span className="text-[0.65rem] uppercase tracking-widest text-zinc-500">BPM</span>
+            <span className="tabular-nums text-sm">{recording.bpm}</span>
+          </span>
           <label className="flex items-center gap-2" htmlFor="timeline-zoom">
             <span className="uppercase tracking-widest text-[0.65rem] text-zinc-500">
               ズーム
@@ -322,6 +370,20 @@ const TimelineComponent = () => {
                 }}
               >
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:3rem_100%]" />
+                {/* BPMに基づいた拍グリッド */}
+                {beatGrid.map((beat) => (
+                  <div
+                    key={`beat-${beat.beatNumber}`}
+                    data-testid={`timeline-beat-${beat.beatNumber}`}
+                    className={`absolute inset-y-0 ${
+                      beat.isMeasure
+                        ? 'w-[2px] bg-purple-400/40'
+                        : 'w-px bg-purple-400/20'
+                    }`}
+                    style={{ left: `${beat.left}px` }}
+                    aria-hidden="true"
+                  />
+                ))}
                 {groupedNotes[sound].map((note) => {
                   const positionPx = clamp((note.time / duration) * timelineWidth, 0, timelineWidth);
                   const isActive = activeNoteIds.has(note.id);
