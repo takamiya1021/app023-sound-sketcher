@@ -3,8 +3,6 @@
 キーボードタップでビートを刻み、タイムラインを書き出せる音楽スケッチツール。
 ミュージックビデオや映像編集の音楽プロトタイピングに最適。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/takamiya1021/app023-sound-sketcher)
-
 ## ✨ 特徴
 
 - **🎹 キーボード演奏**: キーボードのキー（A, S, D, F, J, K, L, ;）でドラム音をリアルタイム演奏
@@ -17,7 +15,13 @@
 
 ## 🎮 デモ
 
-🔗 **[Live Demo](https://app023-au84w1zlf-hiroaki-yoshikuras-projects-7b26a5a1.vercel.app)**
+🔗 **[Live Demo](https://app023.vercel.app/)**
+
+### アプリケーション画面
+
+![Sound Sketcher Interface](png/app-interface.png)
+
+*キーボードガイド（左）とタイムライン表示（右）のインターフェース*
 
 ## 🚀 クイックスタート
 
